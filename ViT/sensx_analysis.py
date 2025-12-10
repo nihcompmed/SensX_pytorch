@@ -2,10 +2,11 @@ import yaml
 import torch
 import os
 import argparse
+import pickle
 from PIL import Image
 from define_qoi import initialize_model_and_qoi
 import sys
-sys.path.append('../')
+# sys.path.append('../') # Uncomment if needed
 from sensx_pytorch_32bit import SensitivityAnalyzer
 
 def main():
@@ -44,32 +45,63 @@ def main():
         device=device
     )
 
-    # 5. Run Loop
+    # 5. Load ALL Images
     input_dir = config['experiment']['input_dir']
     output_dir = config['experiment']['output_dir']
     os.makedirs(output_dir, exist_ok=True)
     
-    image_files = [f for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg'))]
-    print(f"Starting Analysis on {len(image_files)} images...")
+    image_files = sorted([f for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg'))])
+    total_files = len(image_files)
+    
+    if total_files == 0:
+        print("No images found in input directory.")
+        return
+
+    print(f"Loading ALL {total_files} images into memory...")
+
+    batch_tensors = []
+    valid_filenames = []
 
     for img_name in image_files:
-        print(f"\nProcessing {img_name}...")
-        try:
-            img_path = os.path.join(input_dir, img_name)
-            raw_image = Image.open(img_path).convert("RGB")
-            x_input = transform(raw_image).to(device)
+        img_path = os.path.join(input_dir, img_name)
+        # No try-except: Fail fast if image is corrupt
+        raw_image = Image.open(img_path).convert("RGB")
+        t_img = transform(raw_image) # (C, H, W)
+        batch_tensors.append(t_img)
+        valid_filenames.append(img_name)
 
-            save_path = os.path.join(output_dir, f"result_{img_name}.pkl")
-            
-            analyzer.run_full_analysis(
-                x=x_input, 
-                config=config, 
-                save_path=save_path
-            )
-        except Exception as e:
-            print(f"Failed to process {img_name}: {e}")
+    # 6. Stack into One Giant Tensor
+    # Shape: (Total_Files, C, H, W)
+    x_batch = torch.stack(batch_tensors).to(device)
+    
+    print(f"Input Tensor Shape: {x_batch.shape}")
+    print("Starting Full Analysis...")
 
-    print("\nJob Complete.")
+    # 7. Run Analysis
+    results = analyzer.run_full_analysis(
+        x=x_batch, 
+        config=config, 
+        save_path=None 
+    )
+
+    if results is None:
+        print("Analysis failed (Optimal Delta not found).")
+        return
+
+    # 8. Save Results (Named after Config)
+    # Inject filenames for mapping back to inputs
+    results['filenames'] = valid_filenames
+    
+    # Logic: /path/to/exp_vit_patch16.yaml -> results_exp_vit_patch16.pkl
+    config_basename = os.path.splitext(os.path.basename(args.config))[0]
+    save_name = f"results_{config_basename}.pkl"
+    save_path = os.path.join(output_dir, save_name)
+    
+    print(f"Saving results to {save_path}...")
+    with open(save_path, 'wb') as f:
+        pickle.dump(results, f)
+
+    print("Job Complete.")
 
 if __name__ == "__main__":
     main()

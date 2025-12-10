@@ -27,5 +27,5 @@ optimal_delta_search:
 sensitivity_analysis:
   # Options: "feature_batching" (Default, for Images) or "input_batching" (For Tabular/Many inputs)
   method: "feature_batching"
-  n_trajectories: 5   # Number of Morris trajectories (n_w)
-  batch_size: 512        # Inference batch size for trajectory steps (vectorized chunks)
+  n_trajectories: 50   # Number of Morris trajectories (n_w)
+  batch_size: 1024        # Inference batch size for trajectory steps (vectorized chunks)
