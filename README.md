@@ -7,3 +7,9 @@ ViT:
 3. Run sh bash_final_script.sh to generate swarm job bash files run_smiling_experiments.sh and run_eyeglasses_experiments.sh.
 4. We ran specifically, swarm -f run_smiling_experiments.sh -g 10 -t 12 --time=6:00:00 --gres=gpu:a100:1 --partition=gpu and swarm -f run_eyeglasses_experiments.sh -g 10 -t 12 --time=6:00:00 --gres=gpu:a100:1 --partition=gpu
 5. config_base.yaml has the hyperparameters.
+
+Single-cell data (HLCA):
+
+1. 
+
+
