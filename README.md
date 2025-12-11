@@ -16,10 +16,12 @@ ViT:
 
 Single-cell data from human lung cell atlas (HLCA):
 
-1. Make sure 4cb45d80-499a-48ae-a056-c71ac3552c94.h5ad file is in the folder. This is the HLCA core atlas available at https://data.humancellatlas.org/hca-bio-networks/lung/atlases/lung-v1-0.
-2. train.py to train the FFN models for each cell type. The training script will require around 55 GB memory.
-3. Run shortlist_cells.py to shortlist cells for local XAI.
-4. Run generate_configs.py to generate config files for SensX analysis.
-5. 
+1. Download HLCA core atlas (4cb45d80-499a-48ae-a056-c71ac3552c94.h5ad) from https://data.humancellatlas.org/hca-bio-networks/lung/atlases/lung-v1-0.
+2. Run train.py to train the FFN models for each cell type. The training script will require around 55 GB memory.
+3. Run get_global_domain.py to get the global domain for non-constant genes.
+4. Run shortlist_cells.py to shortlist cells for local XAI.
+5. Run generate_configs.py to generate config files for SensX analysis and bash script run_all_jobs.sh to process all config files.
+6. We ran swarm -f run_all_jobs.sh -g 20 -t 12 -b 10 --time=60:00 --gres=gpu:a100:1 --partition=gpu
+7. 
 
 
