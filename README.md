@@ -11,7 +11,7 @@ ViT:
 1. download.py to download pretrained ViT model from HuggingFace.
 2. finetune_vit.sh to train two binary classifiers, one to identify Smiling faces and other to identify Eyeglasses. Make sure IMAGES_DIR is the location of the CelebA aligned images.
 3. Run sh bash_final_script.sh to generate swarm job bash files run_smiling_experiments.sh and run_eyeglasses_experiments.sh.
-4. We ran specifically, swarm -f run_smiling_experiments.sh -g 10 -t 12 --time=6:00:00 --gres=gpu:a100:1 --partition=gpu and swarm -f run_eyeglasses_experiments.sh -g 10 -t 12 --time=6:00:00 --gres=gpu:a100:1 --partition=gpu
+4. We ran specifically, swarm -f run_smiling_experiments.sh -g 10 -t 12 --time=10:00:00 --gres=gpu:a100:1 --partition=gpu and swarm -f run_eyeglasses_experiments.sh -g 10 -t 12 --time=10:00:00 --gres=gpu:a100:1 --partition=gpu
 5. config_base.yaml has the hyperparameters.
 
 Single-cell data from human lung cell atlas (HLCA):
@@ -21,7 +21,7 @@ Single-cell data from human lung cell atlas (HLCA):
 3. Run get_global_domain.py to get the global domain for non-constant genes.
 4. Run shortlist_cells.py to shortlist cells for local XAI.
 5. Run generate_configs.py to generate config files for SensX analysis and bash script run_all_jobs.sh to process all config files.
-6. We ran swarm -f run_all_jobs.sh -g 20 -t 12 -b 10 --time=60:00 --gres=gpu:a100:1 --partition=gpu
+6. We ran swarm -f run_all_jobs.sh -g 20 -t 12 -b 10 --time=4:00:00 --gres=gpu:a100:1 --partition=gpu
 7. 
 
 
