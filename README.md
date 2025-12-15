@@ -35,5 +35,6 @@ Single-cell data from human lung cell atlas (HLCA):
 8. We specifically ran swarm -f bash_sensx_landscapes.sh -g 20 -t 12 --time=10:00:00 --gres=gpu:a100:1 --partition=gpu to get the landscape.
 9. Run pert_landscapes_sensx_ranks.py and pert_landscapes_shap_ranks.py to get perturbation landscapes.
 10. Run plot_pert_landscapes.py to plot example perturbation landscapes comparing SensX with deepSHAP.
-11. 
+11. pert_delta1_bottom.py and pert_delta1_bottom_SHAP.py to compute effect of perturbing bottom-k features on QOI.
+12. plot_compare_bottom_delta1_sensx_shap.py to plot the results
 
