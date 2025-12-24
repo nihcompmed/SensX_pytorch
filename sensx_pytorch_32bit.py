@@ -4,9 +4,9 @@ import pickle
 import os
 from tqdm import tqdm
 
-# --- ENABLE A100 TENSOR CORES (TF32) ---
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
+## --- ENABLE A100 TENSOR CORES (TF32) ---
+#torch.backends.cuda.matmul.allow_tf32 = True
+#torch.backends.cudnn.allow_tf32 = True
 
 class SensitivityAnalyzer:
     def __init__(self, model, qoi_func, global_lower_path, global_upper_path, perturb_features_path=None, device=None):
@@ -82,43 +82,75 @@ class SensitivityAnalyzer:
                 qoi_accumulator.append(flat_qois.view(current_batch_size, N).cpu())
 
             all_qois = torch.cat(qoi_accumulator, dim=0).numpy()
+            
+            # --- CALCULATE PERCENTILES (25th and 75th) ---
+            q1, q99 = np.percentile(all_qois, [1, 99], axis=0)
+            
             profile[delta] = {
                 "median": np.median(all_qois, axis=0),
                 "min": np.min(all_qois, axis=0),
                 "max": np.max(all_qois, axis=0),
-                "std": np.std(all_qois, axis=0)
+                "std": np.std(all_qois, axis=0),
+                "q1": q1, # Save Q1
+                "q99": q99  # Save Q99
             }
         return profile
 
     # ==========================================
     # STEP 2: OPTIMAL DELTA SEARCH (Float32)
     # ==========================================
-    def find_optimal_delta(self, stability_profile, tau_a, tau_r):
+    def find_optimal_delta(self, stability_profile, tau_a):
+        """
+        Identify the optimal delta for each input.
+        
+        Logic:
+        1. Look for the first delta where the ENTIRE remaining tail of the curve 
+           stays within a variation of `tau_a`.
+        2. Variation is defined as (Global Max of Tail Q99 - Global Min of Tail Q1).
+           (Interquartile Range Stability).
+        
+        If no stable tail is found, defaults to the LARGEST delta (1.0).
+        """
         sorted_deltas = sorted(stability_profile.keys())
         deltas = np.array(sorted_deltas)
-        medians_stack = np.stack([stability_profile[d]['median'] for d in sorted_deltas], axis=0)
-        N = medians_stack.shape[1]
         
-        grads = np.gradient(medians_stack, deltas, axis=0)
+        # Stack Percentiles for vectorized operations
+        q1_stack = np.stack([stability_profile[d]['q1'] for d in sorted_deltas], axis=0)       # (T, N)
+        q99_stack = np.stack([stability_profile[d]['q99'] for d in sorted_deltas], axis=0)       # (T, N)
         
-        optimal_deltas = np.full(N, deltas[0])
+        N = q1_stack.shape[1]
+        
+        # Default to the LARGEST delta (deltas[-1]). 
+        optimal_deltas = np.full(N, deltas[-1], dtype=np.float32) 
+        
         found_mask = np.zeros(N, dtype=bool)
 
-        print(f"  [Step 2] Finding Optimal Delta per input...")
+        print(f"  [Step 2] Finding Optimal Delta per input (IQR Logic: Q99 - Q1)...")
         
         valid_matrix = np.zeros((len(deltas), N), dtype=bool)
         
         for j in range(len(deltas) - 1):
-            tail_medians = medians_stack[j+1:, :]
-            tail_grads = grads[j+1:, :]
-            variation = np.max(tail_medians, axis=0) - np.min(tail_medians, axis=0)
-            max_grad_mag = np.max(np.abs(tail_grads), axis=0)
-            is_stable = (variation <= tau_a) & (max_grad_mag <= tau_r)
+            # Look at the tail (future deltas)
+            # We want the "Envelope" of the IQR for the rest of the curve
+            tail_q99s = q99_stack[j+1:, :]
+            tail_q1s = q1_stack[j+1:, :]
+            
+            # --- LOGIC CHANGE ---
+            # Upper Bound of Envelope: Max of all future Q99s
+            # Lower Bound of Envelope: Min of all future Q1s
+            global_tail_q99 = np.max(tail_q99s, axis=0)
+            global_tail_q1 = np.min(tail_q1s, axis=0)
+            
+            variation = global_tail_q99 - global_tail_q1
+            
+            # Strict amplitude check on the IQR envelope
+            is_stable = (variation <= tau_a)
             valid_matrix[j, :] = is_stable
 
         for i in range(N):
             col_valid = valid_matrix[:, i]
             if np.any(col_valid):
+                # Pick the FIRST index where stability starts
                 first_stable_idx = np.argmax(col_valid)
                 optimal_deltas[i] = deltas[first_stable_idx]
                 found_mask[i] = True
@@ -339,13 +371,14 @@ class SensitivityAnalyzer:
         
         delta_star = self.find_optimal_delta(
             profile, 
-            tau_a=config['optimal_delta_search']['tau_a'],
-            tau_r=config['optimal_delta_search']['tau_r']
+            tau_a=config['optimal_delta_search']['tau_a']
         )
         
         if delta_star is None:
             return None
-        
+
+        print(delta_star)
+
         # [NEW] Auto-Guardrail for High Dimensionality
         # If input has > 10k features, FORCE Feature Batching to prevent hanging/OOM.
         if D_input > 10000:

@@ -6,7 +6,7 @@ import pickle
 from PIL import Image
 from define_qoi import initialize_model_and_qoi
 import sys
-# sys.path.append('../') # Uncomment if needed
+sys.path.append('../') # Uncomment if needed
 from sensx_pytorch_32bit import SensitivityAnalyzer
 
 def main():

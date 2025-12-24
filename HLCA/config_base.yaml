@@ -1,7 +1,7 @@
 experiment:
   input_dir: "data/"
   output_dir: "analysis_results/"
-  model_path: "./vit-Smiling-model-final"
+  model_path: "./saved_models/"
   device: "cuda"
 
 data_constraints:
@@ -16,9 +16,9 @@ data_constraints:
 
 stability_analysis:
   # The list of delta values to scan in Step 1
-  deltas: [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.0]
-  n_samples: 5000       # Number of random samples per delta (n_s)
-  batch_size: 512        # Inference batch size for sampling
+  deltas: [0.0005, 0.001, 0.005, 0.01, 0.02, 0.05, 0.10, 0.15, 0.25, 0.40, 0.60, 0.85, 1.0]
+  n_samples: 1000       # Number of random samples per delta (n_s)
+  batch_size: 64        # Inference batch size for sampling
 
 optimal_delta_search:
   tau_a: 0.10           # Max allowed variation (Max-Min) in the tail
@@ -27,4 +27,4 @@ sensitivity_analysis:
   # Options: "feature_batching" (Default, for Images) or "input_batching" (For Tabular/Many inputs)
   method: "feature_batching"
   n_trajectories: 50   # Number of Morris trajectories (n_w)
-  batch_size: 2048        # Inference batch size for trajectory steps (vectorized chunks)
+  batch_size: 4096        # Inference batch size for trajectory steps (vectorized chunks)
